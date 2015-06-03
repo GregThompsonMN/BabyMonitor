@@ -19,7 +19,8 @@
         <Viewbox Grid.Row="1" HorizontalAlignment="Center">
             <Grid Name="CompositeImage">
                 <Image Source="C:\Development\Default.png" Stretch="UniformToFill" />
-                <Image Source="{Binding ImageSource}" Stretch="UniformToFill" />
+                <Image Name="DayPic" Source="{Binding ImageSource}" Stretch="UniformToFill" Visibility="Visible"/>
+                <Image Name="NightPic" Source="{Binding NightSource}" Stretch="UniformToFill" Visibility="Hidden"/>
             </Grid>
         </Viewbox>
 
