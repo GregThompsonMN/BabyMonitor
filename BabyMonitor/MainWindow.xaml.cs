@@ -84,6 +84,8 @@ namespace BabyMonitor
 
         private ColorFrameReader colorFrameReader = null;
 
+        private BodyFrameReader bodyFrameReader = null;
+
         /// <summary>
         /// Bitmap to display
         /// </summary>
@@ -133,6 +135,10 @@ namespace BabyMonitor
 
             this.colorFrameReader.FrameArrived += colorFrameReader_FrameArrived;
 
+            this.bodyFrameReader = this.kinectSensor.BodyFrameSource.OpenReader();
+
+            this.bodyFrameReader.FrameArrived += bodyFrameReader_FrameArrived;
+
             // Set up coordinate mapper
             //this.coordinateMapper = this.kinectSensor.CoordinateMapper;
 
@@ -160,6 +166,11 @@ namespace BabyMonitor
             this.DataContext = this;
 
             this.InitializeComponent();
+        }
+
+        void bodyFrameReader_FrameArrived(object sender, BodyFrameArrivedEventArgs e)
+        {
+            //throw new NotImplementedException();
         }
 
         void colorFrameReader_FrameArrived(object sender, ColorFrameArrivedEventArgs e)
