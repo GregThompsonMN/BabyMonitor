@@ -250,12 +250,21 @@ namespace BabyMonitor
                                 {
                                     var box = faceFrameResults[i].FaceBoundingBoxInColorSpace;
                                     LastFaceLocation = new Rect(new Point(box.Left, box.Bottom), new Point(box.Right, box.Top));
-                                    Console.WriteLine("Drawing face: " + LastFaceLocation.ToString());
+                                    Console.WriteLine("Drawing Color face: " + LastFaceLocation.ToString());
+                                    lblBPM.Content = "BPM: 60?";
+                                    lblRR.Content = "Resp: 20?";
+                                    lblTemp.Content = "Temp: 98?";
+                                    return;
                                 }
                                 else
                                 {
                                     var box = faceFrameResults[i].FaceBoundingBoxInInfraredSpace;
                                     LastFaceLocation = new Rect(new Point(box.Left, box.Bottom), new Point(box.Right, box.Top));
+                                    Console.WriteLine("Drawing Infrared face: " + LastFaceLocation.ToString());
+                                    lblBPM.Content = "BPM: 60?";
+                                    lblRR.Content = "Resp: 20?";
+                                    lblTemp.Content = "Temp: 98?";
+                                    return;
                                 }
                             }
                         }
@@ -271,6 +280,9 @@ namespace BabyMonitor
                     }
                 }
             }
+            lblBPM.Content = "BPM: N/A";
+            lblRR.Content = "Resp: N/A";
+            lblTemp.Content = "Temp: N/A";
 
         }
 

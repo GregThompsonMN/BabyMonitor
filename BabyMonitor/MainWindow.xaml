@@ -22,6 +22,9 @@
                 <Image Source="C:\Development\Default.png" Stretch="UniformToFill" />
                 <Image Name="DayPic" Source="{Binding ImageSource}" Stretch="UniformToFill" Visibility="Visible"/>
                 <Image Name="NightPic" Source="{Binding NightSource}" Stretch="UniformToFill" Visibility="Hidden"/>
+                <Label Name="lblBPM" Content="BPM: N/A" HorizontalAlignment="Left" Margin="38,0,0,52" FontSize="100" Height="143" VerticalAlignment="Bottom" Background="AntiqueWhite"/>
+                <Label Name="lblRR" Content="Resp: N/A" HorizontalAlignment="Left" Margin="38,27,0,0" FontSize="100" Height="143" VerticalAlignment="Top" Background="AntiqueWhite"/>
+                <Label Name="lblTemp" Content="Temp: N/A" HorizontalAlignment="Right" Margin="0,10,35,0" FontSize="100" Height="143" VerticalAlignment="Top" Background="AntiqueWhite"/>
             </Grid>
         </Viewbox>
 
