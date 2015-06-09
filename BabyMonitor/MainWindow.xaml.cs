@@ -128,6 +128,10 @@ namespace BabyMonitor
         /// </summary>
         public uint bitmapBackBufferSize = 0;
 
+        private DepthFrameReader depthFrameReader = null;
+        private FrameDescription depthFrameDescription = null;
+        
+
         /// <summary>
         /// INotifyPropertyChangedPropertyChanged event to allow window controls to bind to changeable data
         /// From MS Sample Project
@@ -165,6 +169,10 @@ namespace BabyMonitor
             this.bodyFrameReader = this.kinectSensor.BodyFrameSource.OpenReader();
 
             this.bodyFrameReader.FrameArrived += bodyFrameReader_FrameArrived;
+
+            this.depthFrameReader = this.kinectSensor.DepthFrameSource.OpenReader();
+
+            this.depthFrameReader.FrameArrived += depthFrameReader_FrameArrived;
 
             // set the maximum number of bodies that would be tracked by Kinect
             this.bodyCount = this.kinectSensor.BodyFrameSource.BodyCount;
@@ -214,6 +222,7 @@ namespace BabyMonitor
 
             this.infFrameDescription = this.kinectSensor.InfraredFrameSource.FrameDescription;
             this.infBitmap = new WriteableBitmap(this.infFrameDescription.Width, this.infFrameDescription.Height, 96.0, 96.0, PixelFormats.Gray32Float, null);
+            this.depthFrameDescription = this.kinectSensor.DepthFrameSource.FrameDescription;
 
             // Basic connection and methods to convey connection state
             this.kinectSensor.IsAvailableChanged += kinectSensor_IsAvailableChanged;
@@ -229,6 +238,38 @@ namespace BabyMonitor
             this.DataContext = this;
 
             this.InitializeComponent();
+        }
+
+        // Checks for total depth in an effort to detect respiratory rate
+        // This seems to use up all available resources
+        // Should be optimized and/or greatly reduce the range to check
+        void depthFrameReader_FrameArrived(object sender, DepthFrameArrivedEventArgs e)
+        {
+            return;
+            unsafe
+            {
+                using (DepthFrame depthFrame = e.FrameReference.AcquireFrame())
+                {
+                    if (depthFrame != null)
+                    {
+                        using (Microsoft.Kinect.KinectBuffer depthBuffer = depthFrame.LockImageBuffer())
+                        {
+                            ushort* frameData = (ushort*)depthBuffer.UnderlyingBuffer;
+                            double TotalVolume = 0;
+                            for (int i = 0; i < (int)depthBuffer.Size / this.depthFrameDescription.BytesPerPixel; i++)
+                            {
+                                ushort depth = frameData[i];
+                                //if (depth > 0)
+                                //{
+                                //    Console.WriteLine("Breakpoint");
+                                //}
+                                TotalVolume += (byte)(depth >= depthFrame.DepthMinReliableDistance && depth <= ushort.MaxValue ? (depth / 8000.0 * 256.0) : 0);
+                            }
+                            //Console.WriteLine("Depth: " + TotalVolume.ToString());
+                        }
+                    }
+                }
+            }
         }
 
         void bodyFrameReader_FrameArrived(object sender, BodyFrameArrivedEventArgs e)
