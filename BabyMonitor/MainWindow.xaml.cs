@@ -130,7 +130,10 @@ namespace BabyMonitor
 
         private DepthFrameReader depthFrameReader = null;
         private FrameDescription depthFrameDescription = null;
-        
+
+        private bool StableFace = false;
+
+        private Queue<Rect> LastFaces = new Queue<Rect>();
 
         /// <summary>
         /// INotifyPropertyChangedPropertyChanged event to allow window controls to bind to changeable data
@@ -245,7 +248,7 @@ namespace BabyMonitor
         // Should be optimized and/or greatly reduce the range to check
         void depthFrameReader_FrameArrived(object sender, DepthFrameArrivedEventArgs e)
         {
-            return;
+            return; // Skip - see note below
             unsafe
             {
                 using (DepthFrame depthFrame = e.FrameReference.AcquireFrame())
@@ -256,16 +259,20 @@ namespace BabyMonitor
                         {
                             ushort* frameData = (ushort*)depthBuffer.UnderlyingBuffer;
                             double TotalVolume = 0;
+                            ushort minValue = depthFrame.DepthMinReliableDistance;
+                            ushort maxValue = ushort.MaxValue;
+                            ushort depthAdjust = 8000 / 256;
+
+                            // NOTE: This is too slow
+                            // I have not analyzed why - it doesn't seem to me like it should be that slow
+                            // But this event triggering will block out all other processing
+                            // Open to suggestions
+                            // It only iterates over ~200k points 30x per second
                             for (int i = 0; i < (int)depthBuffer.Size / this.depthFrameDescription.BytesPerPixel; i++)
                             {
                                 ushort depth = frameData[i];
-                                //if (depth > 0)
-                                //{
-                                //    Console.WriteLine("Breakpoint");
-                                //}
-                                TotalVolume += (byte)(depth >= depthFrame.DepthMinReliableDistance && depth <= ushort.MaxValue ? (depth / 8000.0 * 256.0) : 0);
+                                TotalVolume += (depth >= minValue && depth <= maxValue ? (depth / depthAdjust) : 0);
                             }
-                            //Console.WriteLine("Depth: " + TotalVolume.ToString());
                         }
                     }
                 }
@@ -291,11 +298,24 @@ namespace BabyMonitor
                                 {
                                     var box = faceFrameResults[i].FaceBoundingBoxInColorSpace;
                                     LastFaceLocation = new Rect(new Point(box.Left, box.Bottom), new Point(box.Right, box.Top));
-                                    Console.WriteLine("Drawing Color face: " + LastFaceLocation.ToString());
-                                    lblBPM.Content = "BPM: 60?";
-                                    lblRR.Content = "Resp: 20?";
-                                    lblTemp.Content = "Temp: 98?";
-                                    return;
+
+                                    LastFaces.Enqueue((Rect)LastFaceLocation);
+                                    // Experiment in monitoring stability
+                                    // Requires faces found in 30 straight frames
+                                    // Where the most recent is within 10 pixels of the running averages
+                                    // I think this is still too volatile, but it could be tuned.
+                                    // I think the face tracking itself may be contributing to the volatility as much as actual movement
+                                    if ((LastFaces.Count > 30) && (LastFaceLocation.Value.Bottom - LastFaces.Average(m => m.Bottom) < 10) && (LastFaceLocation.Value.Top - LastFaces.Average(m => m.Top) < 10) && (LastFaceLocation.Value.Left - LastFaces.Average(m => m.Left) < 10) && (LastFaceLocation.Value.Right - LastFaces.Average(m => m.Right) < 10))
+                                    {
+                                        LastFaces.Dequeue();
+                                        StableFace = true;
+                                        Console.WriteLine("Stable");
+                                    }
+                                    else
+                                    {
+                                        StableFace = false;
+                                        Console.WriteLine("Drawing Color face: " + LastFaceLocation.ToString());
+                                    }
                                 }
                                 else
                                 {
@@ -307,6 +327,11 @@ namespace BabyMonitor
                                     lblTemp.Content = "Temp: 98?";
                                     return;
                                 }
+                            }
+                            else
+                            {
+                                StableFace = false;
+                                LastFaces.Clear();
                             }
                         }
                         else
@@ -321,9 +346,18 @@ namespace BabyMonitor
                     }
                 }
             }
-            lblBPM.Content = "BPM: N/A";
-            lblRR.Content = "Resp: N/A";
-            lblTemp.Content = "Temp: N/A";
+
+            if (StableFace)
+            {
+                lblBPM.Content = "BPM: 60?";
+                lblRR.Content = "Resp: 20?";
+                lblTemp.Content = "Temp: 98?";
+            }
+            else {
+                lblBPM.Content = "BPM: N/A";
+                lblRR.Content = "Resp: N/A";
+                lblTemp.Content = "Temp: N/A";
+            }
 
         }
 
