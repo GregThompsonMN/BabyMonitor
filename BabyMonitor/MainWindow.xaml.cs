@@ -44,16 +44,16 @@ namespace BabyMonitor
         /// </summary>
         private KinectSensor kinectSensor = null;
 
-        /// <summary>
-        /// Coordinate Mapper for sychnorizing data from different sources or in different coordinate systems
-        /// </summary>
-        private CoordinateMapper coordinateMapper = null;
+        ///// <summary>
+        ///// Coordinate Mapper for sychnorizing data from different sources or in different coordinate systems
+        ///// </summary>
+        //private CoordinateMapper coordinateMapper = null;
 
-        /// <summary>
-        /// The reader for all data arriving from the Kinect
-        /// My initial goal will be to include all data I think may at some point be useful
-        /// </summary>
-        private MultiSourceFrameReader multiSourceFrameReader = null;
+        ///// <summary>
+        ///// The reader for all data arriving from the Kinect
+        ///// My initial goal will be to include all data I think may at some point be useful
+        ///// </summary>
+        //private MultiSourceFrameReader multiSourceFrameReader = null;
 
 
         /// <summary>
@@ -213,7 +213,7 @@ namespace BabyMonitor
             this.faceFrameResults = new FaceFrameResult[this.bodyCount];
 
             // Set up coordinate mapper
-            this.coordinateMapper = this.kinectSensor.CoordinateMapper;
+            //this.coordinateMapper = this.kinectSensor.CoordinateMapper;
             
 
             // Get the color Frame info, and create a bitmap of that size
@@ -268,9 +268,17 @@ namespace BabyMonitor
                             // But this event triggering will block out all other processing
                             // Open to suggestions
                             // It only iterates over ~200k points 30x per second
-                            for (int i = 0; i < (int)depthBuffer.Size / this.depthFrameDescription.BytesPerPixel; i++)
+
+                            // Original Iteration
+                            //for (int i = 0; i < (int)depthBuffer.Size / this.depthFrameDescription.BytesPerPixel; i++)
+
+                            // Limited Sampling - This keeps up on my machine
+
+                            // I beleive that getting the depthFrameDescription's BytesPerPixel may have been the bottleneck?
+                            int testSampleRate = 1;
+                            for (int i = 0; i < (int)depthBuffer.Size / (testSampleRate *2); i++)
                             {
-                                ushort depth = frameData[i];
+                                ushort depth = frameData[i * testSampleRate];
                                 TotalVolume += (depth >= minValue && depth <= maxValue ? (depth / depthAdjust) : 0);
                             }
                         }
@@ -421,6 +429,7 @@ namespace BabyMonitor
         /// <param name="e"></param>
         void multiSourceFrameReader_MultiSourceFrameArrived(object sender, MultiSourceFrameArrivedEventArgs e)
         {
+            // CURRENTLY DISABLED
             Console.WriteLine("MSF!");
             MultiSourceFrame multiSourceFrame = e.FrameReference.AcquireFrame();
             bool isBitmapLocked = false;
@@ -535,11 +544,52 @@ namespace BabyMonitor
 
         void MainWindow_Closing(object sender, CancelEventArgs e)
         {
-            if (this.multiSourceFrameReader != null)
+            //if (this.multiSourceFrameReader != null)
+            //{
+            //    // MultiSourceFrameReder is IDisposable
+            //    this.multiSourceFrameReader.Dispose();
+            //    this.multiSourceFrameReader = null;
+            //}
+
+            if (this.bodyFrameReader != null)
             {
-                // MultiSourceFrameReder is IDisposable
-                this.multiSourceFrameReader.Dispose();
-                this.multiSourceFrameReader = null;
+                this.bodyFrameReader.Dispose();
+                this.bodyFrameReader = null;
+            }
+
+            if (this.colorFrameReader != null)
+            {
+                this.colorFrameReader.Dispose();
+                this.colorFrameReader = null;
+            }
+
+            if (this.depthFrameReader != null)
+            {
+                this.depthFrameReader.Dispose();
+                this.depthFrameReader = null;
+            }
+
+            for (int i = 0; i < this.bodyCount; i++)
+            {
+                if (this.faceFrameReaders[i] != null)
+                {
+                    // FaceFrameReader is IDisposable
+                    this.faceFrameReaders[i].Dispose();
+                    this.faceFrameReaders[i] = null;
+                }
+
+                if (this.faceFrameSources[i] != null)
+                {
+                    // FaceFrameSource is IDisposable
+                    this.faceFrameSources[i].Dispose();
+                    this.faceFrameSources[i] = null;
+                }
+            }
+
+            if (this.infraredFrameReader != null)
+            {
+                this.infraredFrameReader.Dispose();
+                this.infraredFrameReader = null;
             }
 
             if (this.kinectSensor != null)
