@@ -18,3 +18,6 @@ The Kinect SDK v2 will need to be installed.  A Kinect will need to be connected
 The Face tracking components require the folder NuiDatabase - the easiest way is copying it from the Debug folder of a face-related sample project, into the Debug/Release folder of your project.  One possible location:
 
 C:\Program Files\Microsoft SDKs\Kinect\v2.0_1409\Samples\Managed\FaceBasics-WPF\bin\x64\Debug\NuiDatabase
+
+## Status: Early Development
+Code will (mostly) do what it says it does, but many features remain unimplemented
