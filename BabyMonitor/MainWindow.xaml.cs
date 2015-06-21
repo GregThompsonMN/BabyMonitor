@@ -186,6 +186,7 @@ namespace BabyMonitor
             // specify the required face frame results
             FaceFrameFeatures faceFrameFeatures =
                 FaceFrameFeatures.BoundingBoxInColorSpace
+                | FaceFrameFeatures.BoundingBoxInInfraredSpace
                 | FaceFrameFeatures.PointsInColorSpace
                 | FaceFrameFeatures.RotationOrientation
                 | FaceFrameFeatures.FaceEngagement
@@ -329,11 +330,24 @@ namespace BabyMonitor
                                 {
                                     var box = faceFrameResults[i].FaceBoundingBoxInInfraredSpace;
                                     LastFaceLocation = new Rect(new Point(box.Left, box.Bottom), new Point(box.Right, box.Top));
-                                    Console.WriteLine("Drawing Infrared face: " + LastFaceLocation.ToString());
-                                    lblBPM.Content = "BPM: 60?";
-                                    lblRR.Content = "Resp: 20?";
-                                    lblTemp.Content = "Temp: 98?";
-                                    return;
+
+                                    LastFaces.Enqueue((Rect)LastFaceLocation);
+                                    // Experiment in monitoring stability
+                                    // Requires faces found in 30 straight frames
+                                    // Where the most recent is within 10 pixels of the running averages
+                                    // I think this is still too volatile, but it could be tuned.
+                                    // I think the face tracking itself may be contributing to the volatility as much as actual movement
+                                    if ((LastFaces.Count > 30) && (LastFaceLocation.Value.Bottom - LastFaces.Average(m => m.Bottom) < 10) && (LastFaceLocation.Value.Top - LastFaces.Average(m => m.Top) < 10) && (LastFaceLocation.Value.Left - LastFaces.Average(m => m.Left) < 10) && (LastFaceLocation.Value.Right - LastFaces.Average(m => m.Right) < 10))
+                                    {
+                                        LastFaces.Dequeue();
+                                        StableFace = true;
+                                        Console.WriteLine("Stable");
+                                    }
+                                    else
+                                    {
+                                        StableFace = false;
+                                        Console.WriteLine("Drawing Infrared face: " + LastFaceLocation.ToString());
+                                    }
                                 }
                             }
                             else
@@ -518,11 +532,46 @@ namespace BabyMonitor
                 backBuffer[i] = Math.Min(InfraredOutputValueMaximum, (((float)frameData[i] / InfraredSourceValueMaximum * InfraredSourceScale) * (1.0f - InfraredOutputValueMinimum)) + InfraredOutputValueMinimum);
             }
 
+            if (!ShowDay) // For Debug purposes, only calculate the HR in infrared if it is displaying infrared
+            {
+                if (StableFace)
+                {
+                    float faceValue = 0;
+                    int bmpWidth = (int)this.infBitmap.Width;
+                    for (int i = (int)LastFaceLocation.Value.Top; i < LastFaceLocation.Value.Bottom; i++)
+                    {
+                        for (int j = (int)LastFaceLocation.Value.Left; j < LastFaceLocation.Value.Right; j++)
+                        {
+                            faceValue += backBuffer[bmpWidth * i + j];
+                        }
+                    }
+                    //Console.WriteLine("Value: " + faceValue.ToString() + " over " + LastFaceLocation.Value.Size.ToString());
+                    // Create a log file for analysis of data
+                    // ToDo - look at using Kinect's timing for timestamp (although 30 fps should be low enough resolution that dateTime.now should work?
+                    WriteHRDataToLog(faceValue.ToString() + ";" + LastFaceLocation.Value.Left.ToString() + ";" + LastFaceLocation.Value.Width.ToString() + ";" + LastFaceLocation.Value.Top.ToString() + ";" + LastFaceLocation.Value.Height.ToString() + ";" + DateTime.Now.ToString("HH:mm:ss.ffff"));
+                }
+            }
+
             // mark the entire bitmap as needing to be drawn
             this.infBitmap.AddDirtyRect(new Int32Rect(0, 0, this.infBitmap.PixelWidth, this.infBitmap.PixelHeight));
 
             // unlock the bitmap
             this.infBitmap.Unlock();
+        }
+
+        private void WriteHRDataToLog(string Data)
+        {
+            try
+            {
+                // Create a log file for analysis of data
+                System.IO.StreamWriter sw = new StreamWriter(@"HR.txt", true);
+                sw.WriteLine(Data);
+                sw.Close();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error writing to HR Log: " + ex.ToString());
+            }
         }
 
         public ImageSource ImageSource
