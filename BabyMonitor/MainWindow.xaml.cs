@@ -513,6 +513,9 @@ namespace BabyMonitor
             }
         }
 
+        // Note: Hat tip to Dwight Goins and his YouTube video - he doesn't release code, but he walks through his process and shows it is possible
+        // https://www.youtube.com/watch?v=LnX0qko-OOk
+        // https://www.youtube.com/watch?v=IpGelIHlEsM
         private unsafe void ProcessInfraredFrameData(IntPtr infraredFrameData, uint infraredFrameDataSize)
         {
             // infrared frame data is a 16 bit value
